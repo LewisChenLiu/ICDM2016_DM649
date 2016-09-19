@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+    <meta charset="utf-8">
+    <title>Seek</title>
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+        #map {
+            height: 100%;
+        }
+    </style>
+    <script>
+
+        // This will parse a delimited string into an array of
+        // arrays. The default delimiter is the comma, but this
+        // can be overriden in the second argument.
+        function CSVToArray(strData, strDelimiter) {
+            // Check to see if the delimiter is defined. If not,
+            // then default to comma.
+            strDelimiter = (strDelimiter || ",");
+
+            // Create a regular expression to parse the CSV values.
+            var objPattern = new RegExp(
+                    (
+                            // Delimiters.
+                            "(\\" + strDelimiter + "|\\r?\\n|\\r|^)" +
+
+                            // Quoted fields.
+                            "(?:\"([^\"]*(?:\"\"[^\"]*)*)\"|" +
+
+                            // Standard fields.
+                            "([^\"\\" + strDelimiter + "\\r\\n]*))"
+                    ), "gi");
+
+            // Create an array to hold our data. Give the array
+            // a default empty first row.
+            var arrData = [[]];
+
+            // Create an array to hold our individual pattern
+            // matching groups.
+            var arrMatches = null;
+
+            // Keep looping over the regular expression matches
+            // until we can no longer find a match.
+            while (arrMatches = objPattern.exec(strData)) {
+                // Get the delimiter that was found.
+                var strMatchedDelimiter = arrMatches[1];
+
+                // Check to see if the given delimiter has a length
+                // (is not the start of string) and if it matches
+                // field delimiter. If id does not, then we know
+                // that this delimiter is a row delimiter.
+                if (strMatchedDelimiter.length && (strMatchedDelimiter != strDelimiter)) {
+                    // Since we have reached a new row of data,
+                    // add an empty row to our data array.
+                    arrData.push([]);
+                }
+
+                // Now that we have our delimiter out of the way,
+                // let's check to see which kind of value we
+                // captured (quoted or unquoted).
+                if (arrMatches[2]) {
+                    // We found a quoted value. When we capture
+                    // this value, unescape any double quotes.
+                    var strMatchedValue = arrMatches[2].replace(
+                            new RegExp("\"\"", "g"),
+                            "\""
+                    );
+
+                } else {
+                    // We found a non-quoted value.
+                    var strMatchedValue = arrMatches[3];
+                }
+
+                // Now that we have our value string, let's add
+                // it to the data array.
+                arrData[arrData.length - 1].push(strMatchedValue);
+            }
+            // Return the parsed data.
+            return ( arrData );
+        }
+
+        function rgbToHex(r, g, b) {
+            return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+        }
+
+
+
+        // This example adds a red rectangle to a map.
+
+        function initMap() {
+            var map = new google.maps.Map(document.getElementById('map'), {
+                zoom: 11,
+                center: {lat: 22.545182, lng: 114.059419},
+//                mapTypeId: google.maps.MapTypeId.TERRAIN
+            });
+
+            var rows = 57;
+            var columns = 27;
+            var gridSize = 0.01;
+            var minLat = 22.447202;
+            var minLan = 113.769246;
+            var maxLat = 22.707849;
+            var maxLan = 114.329910;
+
+            var areaColor = 'black';
+//            var startPoint = 874;
+
+
+            var demandValue = "";
+            var demandFile = new XMLHttpRequest();
+
+            // Read the lat/long info for markers
+            demandFile.open("GET", "demand.csv", false);
+            demandFile.send(null);
+            demandValue = demandFile.responseText;
+
+            // Convert our data from the CVS file to a usable array
+            var demandData = CSVToArray(demandValue);
+
+            var nullValue = "";
+            var nullFile = new XMLHttpRequest();
+
+            // Read the lat/long info for markers
+            nullFile.open("GET", "road.csv", false);
+            nullFile.send(null);
+            nullValue = nullFile.responseText;
+
+            // Convert our data from the CVS file to a usable array
+            var nullData = CSVToArray(nullValue);
+
+            var minimum = 0.00;
+            var maximum = 110.00;
+            var alpha = 0.5;
+
+            for(var i=0; i<columns; i++){
+                for(var j=0; j<rows; j++){
+
+                    if(demandData[i][j] != "-"){
+                        var value = parseFloat(demandData[i][j]);
+                        var ratio = 2 * (value-minimum) / (maximum - minimum);
+                        var b = parseInt(255*(1 - ratio));
+                        if(b<0) {
+                            b = 0;
+                        }
+                        var r = parseInt(255*(ratio - 1));
+                        if(r<0){
+                            r = 0;
+                        }
+                        var g = 255 - b - r;
+
+                        areaColor = rgbToHex(r, g, b);
+                        alpha = 0.5;
+                    }
+
+                    else{
+                        areaColor = "white";
+                        alpha = 0.5;
+                    }
+
+                    var rectangle = new google.maps.Rectangle({
+                        strokeColor: 'balck',
+                        strokeOpacity: 0.3,
+                        strokeWeight: 0.2,
+                        fillColor: areaColor,
+                        fillOpacity: alpha,
+                        map: map,
+                        bounds: {
+                            north: maxLat-i*gridSize+gridSize,
+                            south: maxLat-i*gridSize,
+                            east: minLan+j*gridSize+gridSize,
+                            west: minLan+j*gridSize
+                        }
+                    });
+
+                }
+            }
+        }
+
+
+    </script>
+</head>
+<body>
+<div id="map"></div>
+<script async defer
+        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCBeIvJweS4ZzyJRvBA7kZnryBH-SZzbFw&callback=initMap">
+</script>
+</body>
+</html>
