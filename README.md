@@ -1,6 +1,8 @@
 ICDM2016 DM649
 ===============
 
+This repository provides code and data references of paper **The Optimal Distribution of Electric-Vehicle Chargers across A City**
+
 Algorithm Working Environment
 --------
 
